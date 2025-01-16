@@ -1,15 +1,22 @@
 package user
 
 import (
-	"github.com/gorilla/mux"
+	"ecom/service/auth"
+	"ecom/types"
+	"ecom/utils"
+	"fmt"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
 )
 
 type Handler struct {
+	store types.UserStore
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(store types.UserStore) *Handler {
+	return &Handler{store: store}
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
@@ -23,10 +30,46 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	// get JSON payload
+	var user types.RegisterUserPayload
+	if err := utils.ParseJSON(r, user); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// validate payload
+	if err := utils.Validate.Struct(user); err != nil {
+		errors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		return
+	}
 
 	// check if the user exists
-	// if user does not exists create the new user
+	_, err := h.store.GetUserByEmail(user.Email)
+	if err == nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("user with email %s already exists", user.Email))
+		return
+	}
 
+	// hash password
+	hashedPassword, err := auth.HashPassword(user.Password)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	err = h.store.CreateUser(types.User{
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		Password:  hashedPassword,
+	})
+
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, nil)
 }
 
 // http://localhost:8080/api/v1/login
