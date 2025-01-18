@@ -27,3 +27,19 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 func WriteError(w http.ResponseWriter, status int, err error) {
 	WriteJSON(w, status, map[string]string{"error": err.Error()})
 }
+
+func WriteValidationError(w http.ResponseWriter, err error) {
+	var validationErrors []map[string]string
+	for _, err := range err.(validator.ValidationErrors) {
+		validationErrors = append(validationErrors, map[string]string {
+			"field":   err.Field(),
+			"message": fmt.Sprintf("Field validation failed on the '%s' tag", err.Tag()),
+		})
+	}
+
+	errorResponse := map[string]interface{}{
+		"error": "validation error",
+		"details": validationErrors,
+	}
+	WriteJSON(w, http.StatusBadRequest, errorResponse)
+}

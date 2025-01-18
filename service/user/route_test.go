@@ -83,4 +83,48 @@ func TestUserRegistration(t *testing.T){
 		expectedResponse := `{"error":"user with email alice.doe@example.com already exist"}`
 		assert.JSONEq(t, expectedResponse, rr.Body.String())
 	})
+
+	t.Run("should fail if payload is invalid", func(t *testing.T) {
+		user := types.RegisterUserPayload{
+			FirstName: "",
+			LastName:  "",
+			Email:     "",
+			Password:  "",
+		}
+
+		body, _ := json.Marshal(user)
+		req, err := http.NewRequest(http.MethodPost, "/user", bytes.NewReader(body))
+
+		assert.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		router := mux.NewRouter()
+		router.HandleFunc("/user", handler.handleRegister).Methods(http.MethodPost)
+		router.ServeHTTP(rr, req)
+
+		assert.NoError(t, mock.ExpectationsWereMet())
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		expectedResponse := `{
+			"error": "validation error",
+			"details": [
+				{
+					"field": "FirstName",
+					"message": "Field validation failed on the 'required' tag"
+				},
+				{
+					"field": "LastName",
+					"message": "Field validation failed on the 'required' tag"
+				},
+				{
+					"field": "Email",
+					"message": "Field validation failed on the 'required' tag"
+				},
+				{
+					"field": "Password",
+					"message": "Field validation failed on the 'required' tag"
+				}
+			]
+		}`		
+		assert.JSONEq(t, expectedResponse, rr.Body.String())
+	})
 }
