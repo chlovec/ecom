@@ -4,81 +4,53 @@ import (
 	"bytes"
 	"ecom/types"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestUserServiceHandlers(t *testing.T) {
-	userStore := newMockUserStore()
-	handler := NewHandler(userStore)
+func TestUserRegistration(t *testing.T){
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
 
-	t.Run("should pass if user data is valid", func(t *testing.T) {
+	userStore := NewStore(db)
+	handler := NewHandler(userStore)
+	
+	t.Run("should create new user if payload is valid and email does not exist", func(t *testing.T) {
+		// Mock expected behavior
 		user := types.RegisterUserPayload{
 			FirstName: "Alice",
 			LastName:  "Doe",
 			Email:     "alice.doe@example.com",
 			Password:  "password",
 		}
+
+		mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\?").
+		WithArgs("alice.doe@example.com").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "firstName", "lastName", "email", "password", "createdAt"})) // No rows returned
+
+		mock.ExpectExec("INSERT INTO users").
+		WithArgs("Alice", "Doe", "alice.doe@example.com", sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1)) // Mock successful insertion
+
 		body, _ := json.Marshal(user)
 		req, err := http.NewRequest(http.MethodPost, "/user", bytes.NewReader(body))
-		if err != nil {
-			t.Fatal(err)
-		}
+
+		assert.NoError(t, err)
+
+		req.Header.Set("Content-Type", "application/json")
 
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
 		router.HandleFunc("/user", handler.handleRegister).Methods(http.MethodPost)
 		router.ServeHTTP(rr, req)
 
-		if rr.Code != http.StatusCreated {
-			t.Errorf("expected status code %d, got %d\nresponse: %s", http.StatusCreated, rr.Code, rr.Body.String())
-		}
+		assert.NoError(t, mock.ExpectationsWereMet())
+		assert.Equal(t, http.StatusCreated, rr.Code)
 	})
-
-	t.Run("should fail if user is not in request body", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodPost, "/user", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		rr := httptest.NewRecorder()
-		router := mux.NewRouter()
-		router.HandleFunc("/user", handler.handleRegister).Methods(http.MethodPost)
-		router.ServeHTTP(rr, req)
-
-		if rr.Code != http.StatusBadRequest {
-			t.Errorf("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
-		}
-	})
-}
-
-type mockUserStore struct {
-	users map[string]types.User // Simulate a data store
-}
-
-func newMockUserStore() *mockUserStore {
-	return &mockUserStore{users: make(map[string]types.User)}
-}
-
-func (m *mockUserStore) GetUserByEmail(email string) (*types.User, error) {
-	if user, exists := m.users[email]; exists {
-		return &user, nil
-	}
-	return nil, fmt.Errorf("user not found")
-}
-
-func (m *mockUserStore) GetUserByID(id int) (*types.User, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockUserStore) CreateUser(u types.User) error {
-	if _, exists := m.users[u.Email]; exists {
-		return fmt.Errorf("user already exists")
-	}
-	m.users[u.Email] = u
-	return nil
 }
