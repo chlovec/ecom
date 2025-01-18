@@ -25,13 +25,46 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 }
 
 func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
-	
+	// // parse payload
+	// var user types.LoginUserPayload
+	// if err := utils.ParseJSON(r, user); err != nil {
+	// 	utils.WriteError(w, http.StatusBadRequest, err)
+	// 	return
+	// }
+
+	// // validate payload
+	// if err := utils.Validate.Struct(user); err != nil {
+	// 	errors := err.(validator.ValidationErrors)
+	// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+	// 	return
+	// }
+
+	// // fetch user account
+	// u, err := h.store.GetUserByEmail(user.Email)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid email or password"))
+	// 	return
+	// }
+
+	// if !auth.ComparePasswords(u.Password, user.Password) {
+	// 	utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid email or password"))
+	// 	return
+	// }
+
+	// secret := []byte(config.Envs.JWTSecret)
+	// token, err := auth.CreateJWT(secret, u.ID)
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+
+	// utils.WriteJSON(w, http.StatusOK, map[string]string{"token": token})
 }
 
 func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	// get JSON payload
 	var user types.RegisterUserPayload
-	if err := utils.ParseJSON(r, user); err != nil {
+	if err := utils.ParseJSON(r, &user); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
