@@ -22,7 +22,6 @@ func TestUserRegistration(t *testing.T){
 	handler := NewHandler(userStore)
 	
 	t.Run("should create new user if payload is valid and email does not exist", func(t *testing.T) {
-		// Mock expected behavior
 		user := types.RegisterUserPayload{
 			FirstName: "Alice",
 			LastName:  "Doe",
@@ -42,8 +41,6 @@ func TestUserRegistration(t *testing.T){
 		req, err := http.NewRequest(http.MethodPost, "/user", bytes.NewReader(body))
 
 		assert.NoError(t, err)
-
-		req.Header.Set("Content-Type", "application/json")
 
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
