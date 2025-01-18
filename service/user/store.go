@@ -30,19 +30,7 @@ func (s *Store) GetUserByEmail(email string) (*types.User, error) {
 		return nil, err
 	}
 
-	u := new(types.User)
-	for rows.Next() {
-		u, err = scanRowsIntoUser(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		if u.ID == 0 {
-			return nil, fmt.Errorf("user not found")
-		}
-	}
-
-	return u, nil
+	return getUserFromRows(rows)
 }
 
 func (s *Store) GetUserByID(id int) (*types.User, error) {
@@ -52,8 +40,13 @@ func (s *Store) GetUserByID(id int) (*types.User, error) {
 		return nil, err
 	}
 
+	return getUserFromRows(rows)
+}
+
+func getUserFromRows(rows *sql.Rows) (*types.User, error) {
 	u := new(types.User)
 	for rows.Next() {
+		var err error
 		u, err = scanRowsIntoUser(rows)
 		if err != nil {
 			return nil, err
