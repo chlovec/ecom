@@ -14,14 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUserRegistration(t *testing.T){
+func TestUserRegistration(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer db.Close()
 
 	userStore := NewStore(db)
 	handler := NewHandler(userStore)
-	
+
 	t.Run("should create new user if email does not exist", func(t *testing.T) {
 		user := types.RegisterUserPayload{
 			FirstName: "Alice",
@@ -31,12 +31,12 @@ func TestUserRegistration(t *testing.T){
 		}
 
 		mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\?").
-		WithArgs("alice.doe@example.com").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "firstName", "lastName", "email", "password", "createdAt"})) // No rows returned
+			WithArgs("alice.doe@example.com").
+			WillReturnRows(sqlmock.NewRows([]string{"id", "firstName", "lastName", "email", "password", "createdAt"})) // No rows returned
 
 		mock.ExpectExec("INSERT INTO users").
-		WithArgs("Alice", "Doe", "alice.doe@example.com", sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(1, 1)) // Mock successful insertion
+			WithArgs("Alice", "Doe", "alice.doe@example.com", sqlmock.AnyArg()).
+			WillReturnResult(sqlmock.NewResult(1, 1)) // Mock successful insertion
 
 		body, _ := json.Marshal(user)
 		req, err := http.NewRequest(http.MethodPost, "/user", bytes.NewReader(body))
@@ -65,8 +65,8 @@ func TestUserRegistration(t *testing.T){
 		rows := sqlmock.NewRows([]string{"id", "firstName", "lastName", "email", "password", "createdAt"}).
 			AddRow(1, "Alice", "Doe", "alice.doe@example.com", "password123", createdAt)
 		mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\?").
-		WithArgs("alice.doe@example.com").
-		WillReturnRows(rows) // No rows returned
+			WithArgs("alice.doe@example.com").
+			WillReturnRows(rows) // No rows returned
 
 		body, _ := json.Marshal(user)
 		req, err := http.NewRequest(http.MethodPost, "/user", bytes.NewReader(body))
@@ -87,9 +87,9 @@ func TestUserRegistration(t *testing.T){
 	t.Run("should fail if payload is invalid", func(t *testing.T) {
 		user := types.RegisterUserPayload{
 			FirstName: "",
-			LastName:  "",
-			Email:     "",
-			Password:  "",
+			LastName:  "MangomandatedbingoletsgetstartedMangomandatedbingolet",
+			Email:     "alice.doe",
+			Password:  "Pa$$",
 		}
 
 		body, _ := json.Marshal(user)
@@ -106,25 +106,13 @@ func TestUserRegistration(t *testing.T){
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
 		expectedResponse := `{
 			"error": "validation error",
-			"details": [
-				{
-					"field": "FirstName",
-					"message": "Field validation failed on the 'required' tag"
-				},
-				{
-					"field": "LastName",
-					"message": "Field validation failed on the 'required' tag"
-				},
-				{
-					"field": "Email",
-					"message": "Field validation failed on the 'required' tag"
-				},
-				{
-					"field": "Password",
-					"message": "Field validation failed on the 'required' tag"
-				}
-			]
-		}`		
+			"details": {
+			  "Email": "'Email' is invalid",
+			  "FirstName": "'FirstName' is required",
+			  "LastName": "'LastName' is greater than the required maximum length",
+			  "Password": "'Password' is less than the required minimum length"
+			}
+		  }`
 		assert.JSONEq(t, expectedResponse, rr.Body.String())
 	})
 }

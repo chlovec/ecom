@@ -29,12 +29,9 @@ func WriteError(w http.ResponseWriter, status int, err error) {
 }
 
 func WriteValidationError(w http.ResponseWriter, err error) {
-	var validationErrors []map[string]string
+	validationErrors := make(map[string]string)
 	for _, err := range err.(validator.ValidationErrors) {
-		validationErrors = append(validationErrors, map[string]string {
-			"field":   err.Field(),
-			"message": fmt.Sprintf("Field validation failed on the '%s' tag", err.Tag()),
-		})
+		validationErrors[err.Field()] = getValidationMessage(err)
 	}
 
 	errorResponse := map[string]interface{}{
@@ -42,4 +39,18 @@ func WriteValidationError(w http.ResponseWriter, err error) {
 		"details": validationErrors,
 	}
 	WriteJSON(w, http.StatusBadRequest, errorResponse)
+}
+
+func getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return fmt.Sprintf("'%s' is required", fe.Field())
+	case "email":
+		return fmt.Sprintf("'%s' is invalid", fe.Field())
+	case "min":
+		return fmt.Sprintf("'%s' is less than the required minimum length", fe.Field())
+	case "max":
+		return fmt.Sprintf("'%s' is greater than the required maximum length", fe.Field())
+	}
+	return fmt.Sprintf("%v", fe.Error())
 }
