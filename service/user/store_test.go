@@ -2,6 +2,7 @@ package user
 
 import (
 	"ecom/types"
+	"errors"
 	"testing"
 	"time"
 
@@ -16,22 +17,44 @@ func TestCreateUser(t *testing.T) {
 
 	store := NewStore(db)
 
-	// Define expected behavior
-	mock.ExpectExec("INSERT INTO users").
+	t.Run("should create user", func(t *testing.T) {
+		// Define expected behavior
+		mock.ExpectExec("INSERT INTO users").
 		WithArgs("John", "Doe", "john.doe@example.com", "password123").
 		WillReturnResult(sqlmock.NewResult(1, 1)) // Mock successful insertion
 
-	// Call the method
-	err = store.CreateUser(types.User{
-		FirstName: "John",
-		LastName:  "Doe",
-		Email:     "john.doe@example.com",
-		Password:  "password123",
+		// Call the method
+		err = store.CreateUser(types.User{
+			FirstName: "John",
+			LastName:  "Doe",
+			Email:     "john.doe@example.com",
+			Password:  "password123",
+		})
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	// Assert
-	assert.NoError(t, err)
-	assert.NoError(t, mock.ExpectationsWereMet())
+	t.Run("should fail to create user", func(t *testing.T) {
+		// Define expected behavior
+		mock.ExpectExec("INSERT INTO users").
+		WithArgs("John", "Doe", "john.doe@example.com", "password123").
+		WillReturnError(errors.New("test query error")) // Mock successful insertion
+
+		// Call the method
+		err = store.CreateUser(types.User{
+			FirstName: "John",
+			LastName:  "Doe",
+			Email:     "john.doe@example.com",
+			Password:  "password123",
+		})
+
+		// Assert
+		assert.Error(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+		assert.EqualError(t, err, "test query error")
+	})
 }
 
 func TestGetUserByEmail(t *testing.T) {
@@ -79,6 +102,20 @@ func TestGetUserByEmail(t *testing.T) {
 		assert.Nil(t, user)
 		assert.Error(t, err)
 		assert.EqualError(t, err, "user not found")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("should return error when db throws exception", func(t *testing.T) {
+		// Mock query
+		mock.ExpectQuery("SELECT \\* FROM users WHERE email = \\?").WithArgs("john.doe@example.com").WillReturnError(errors.New("test query error"))
+
+		// Call the method
+		user, err := store.GetUserByEmail("john.doe@example.com")
+
+		// Assert
+		assert.Nil(t, user)
+		assert.Error(t, err)
+		assert.EqualError(t, err, "test query error")
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 	
