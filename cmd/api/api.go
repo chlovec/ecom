@@ -14,6 +14,11 @@ type APIServer struct {
 	db *sql.DB
 }
 
+func InitServer(addr string, db *sql.DB) error {
+	server := NewAPIServer(addr, db)
+	return server.Run()
+}
+
 func NewAPIServer(addr string, db *sql.DB) *APIServer {
 	return &APIServer{
 		addr: addr,
@@ -29,6 +34,7 @@ func (s *APIServer) Run() error {
 	userHandler := user.NewHandler(userStore)
 	userHandler.RegisterRoutes(subrouter)
 
+	log.Println("Server started!")
 	log.Println("Listening on: ", s.addr)
 	return http.ListenAndServe(s.addr, router)
 }

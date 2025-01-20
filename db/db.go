@@ -15,3 +15,13 @@ func NewMySQLStorage(cfg mysql.Config) (*sql.DB, error) {
 
 	return db, err
 }
+
+func InitDB(cfg mysql.Config) (*sql.DB, error) {
+	db, err := NewMySQLStorage(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Ping()
+	return db, err
+}
