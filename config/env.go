@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/lpernett/godotenv"
 )
 
@@ -34,6 +35,18 @@ func initConfig() Config {
 		DBName:                 getEnv("DB_NAME", "ecom"),
 		JWTSecret:              getEnv("JWT_SECRET", "67hytrrenjkoplhgrestnh90))898"),
 		JWTExpirationInSeconds: getEnvAsInt("JWT_EXPIRATION_IN_SECONDS", defaultJWTExpiration),
+	}
+}
+
+func GetDBConfig() mysql.Config {
+	return mysql.Config{
+		User: Envs.DBUser,
+		Passwd: Envs.DBPassword,
+		Addr: Envs.DBAddress,
+		DBName: Envs.DBName,
+		Net: "tcp",
+		AllowNativePasswords: true,
+		ParseTime: true,
 	}
 }
 

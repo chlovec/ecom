@@ -6,20 +6,10 @@ import (
 	"ecom/config"
 	"ecom/db"
 	"log"
-
-	"github.com/go-sql-driver/mysql"
 )
 
 func main() {
-	db, err := db.NewMySQLStorage(mysql.Config{
-		User: config.Envs.DBUser,
-		Passwd: config.Envs.DBPassword,
-		Addr: config.Envs.DBAddress,
-		DBName: config.Envs.DBName,
-		Net: "tcp",
-		AllowNativePasswords: true,
-		ParseTime: true,
-	})
+	db, err := db.NewMySQLStorage(config.GetDBConfig())
 	if err != nil {
 		log.Fatalf("Unable to open db connection: %v\n", err)
 	}
